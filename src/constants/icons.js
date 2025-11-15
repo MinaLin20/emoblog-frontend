@@ -1,20 +1,34 @@
 // Optional external icon base, e.g.
-// VITE_ICON_BASE_URL=https://raw.githubusercontent.com/<user>/<repo>/<branch>/icon
+// VITE_ICON_BASE_URL=https://example.com/icon
 const ICON_BASE = import.meta?.env?.VITE_ICON_BASE_URL
 
-// Default to your GitHub icons if no env provided
-const GH_BASE = 'https://raw.githubusercontent.com/lrnbrad/emoblog-backend/main/icon'
+// Local static icons (default)
+import alarmLocal from '../../icon/alarm.png'
+import likeOutlineLocal from '../../icon/likeOutline.png'
+import likeFilledLocal from '../../icon/likeFilled.png'
+import commentLocal from '../../icon/comment.png'
+import editLocal from '../../icon/edit.png'
+import deleteLocal from '../../icon/delete.png'
 
 function base(path) {
-  const b = (ICON_BASE || GH_BASE).replace(/\/$/, '')
+  const b = ICON_BASE?.replace(/\/$/, '')
   return `${b}/${path}`
 }
 
-export const ICONS = {
-  alarm: base('alarm.png'),
-  likeOutline: base('likeOutline.png'),
-  likeFilled: base('likeFilled.png'),
-  comment: base('comment.png'),
-  edit: base('edit.png'),
-  delete: base('delete.png'),
-}
+export const ICONS = ICON_BASE
+  ? {
+      alarm: base('alarm.png'),
+      likeOutline: base('likeOutline.png'),
+      likeFilled: base('likeFilled.png'),
+      comment: base('comment.png'),
+      edit: base('edit.png'),
+      delete: base('delete.png'),
+    }
+  : {
+      alarm: alarmLocal,
+      likeOutline: likeOutlineLocal,
+      likeFilled: likeFilledLocal,
+      comment: commentLocal,
+      edit: editLocal,
+      delete: deleteLocal,
+    }
