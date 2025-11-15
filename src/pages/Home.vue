@@ -84,7 +84,7 @@
                   <div class="h-8 w-8 shrink-0 rounded-full bg-divider"></div>
                   <div>
                     <div class="text-sm font-semibold">{{ post.authorUsername || authorLabel(post) }}</div>
-                    <div class="text-xs text-text-secondary">#{{ post.id }}</div>
+                    <div class="text-xs text-text-secondary">{{ formatPostDate(post.createdAt) }}</div>
                   </div>
                 </div>
                 <button
@@ -339,7 +339,7 @@ function closeCreatePanel() {
   createError.value = ''
 }
 
-async function fetchFeed() {
+  async function fetchFeed() {
   loading.value = true
   error.value = ''
   try {
@@ -351,9 +351,23 @@ async function fetchFeed() {
     error.value = e?.message || '載入貼文失敗'
   } finally {
     loading.value = false
+    }
   }
-}
 
+  function formatPostDate(createdAt) {
+    if (!createdAt) return ''
+    try {
+      const d = new Date(createdAt)
+      if (Number.isNaN(d.getTime())) return ''
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return `${y}-${m}-${day}`
+    } catch {
+      return ''
+    }
+  }
+  
 function authorLabel(post) {
   if (!post) return '未知使用者'
   return post.authorDisplayName || `User #${post.authorId ?? '?'}`
