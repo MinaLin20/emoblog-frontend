@@ -83,7 +83,7 @@
                 <div class="flex items-center gap-3">
                   <div class="h-8 w-8 shrink-0 rounded-full bg-divider"></div>
                   <div>
-                    <div class="text-sm font-semibold">{{ authorLabel(post) }}</div>
+                    <div class="text-sm font-semibold">{{ post.authorUsername || authorLabel(post) }}</div>
                     <div class="text-xs text-text-secondary">#{{ post.id }}</div>
                   </div>
                 </div>
