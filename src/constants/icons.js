@@ -9,6 +9,7 @@ import likeFilledLocal from '../../icon/likeFilled.png'
 import commentLocal from '../../icon/comment.png'
 import editLocal from '../../icon/edit.png'
 import deleteLocal from '../../icon/delete.png'
+import sendLocal from '../../icon/send.png'
 
 function base(path) {
   const b = ICON_BASE?.replace(/\/$/, '')
@@ -23,6 +24,7 @@ export const ICONS = ICON_BASE
       comment: base('comment.png'),
       edit: base('edit.png'),
       delete: base('delete.png'),
+      send: base('send.png'),
     }
   : {
       alarm: alarmLocal,
@@ -31,4 +33,5 @@ export const ICONS = ICON_BASE
       comment: commentLocal,
       edit: editLocal,
       delete: deleteLocal,
+      send: sendLocal,
     }

@@ -270,7 +270,18 @@
                 :disabled="createLoading || !createContent.trim()"
                 @click="handleCreateSubmit"
               >
-                <span>+</span>
+                <template v-if="ICONS?.send">
+                  <img
+                    :src="ICONS.send"
+                    alt="Send"
+                    class="h-4 w-4 select-none object-contain"
+                    width="16"
+                    height="16"
+                  />
+                </template>
+                <template v-else>
+                  <span>+</span>
+                </template>
                 <span>{{ createLoading ? 'Posting...' : 'Post' }}</span>
               </button>
             </div>
