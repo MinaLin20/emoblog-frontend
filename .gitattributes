@@ -1,0 +1,2 @@
+# 保持跨平台一致的 LF 換行
+* text=auto eol=lf
