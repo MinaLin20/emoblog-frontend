@@ -117,6 +117,17 @@ async function onSubmit() {
   loading.value = true
   try {
     await registerApi({ ...form })
+    try {
+      localStorage.setItem(
+        'emoProfile',
+        JSON.stringify({
+          username: form.username,
+          firstName: form.firstName,
+          lastName: form.lastName,
+          birthday: form.birthday,
+        }),
+      )
+    } catch {}
     Object.assign(form, emptyForm)
     await router.push({ name: 'Login', query: { registered: '1' } })
   } catch (e) {
