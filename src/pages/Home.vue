@@ -26,7 +26,7 @@
               class="flex w-full items-center gap-3 rounded-button px-3 py-2 text-left text-text-primary transition-colors hover:bg-btn-secondary-hover"
               @click="handleHomeNav"
             >
-              <span class="text-xl" aria-hidden="true">🏠</span>
+              <span class="text-xl" aria-hidden="true">🏚️</span>
               <span class="font-medium">Home</span>
             </button>
             <button
@@ -307,7 +307,7 @@
                 <p class="mt-1 text-base text-neutral-500">{{ profileAccount }}</p>
               </div>
 
-              <p class="text-lg tracking-wide text-neutral-800">{{ profileBirthday }}</p>
+              <p class="text-lg tracking-wide text-neutral-800">Birthday: {{ profileBirthday }}</p>
 
               <p v-if="profileError" class="text-sm text-accent-error">{{ profileError }}</p>
               <p v-else-if="profileLoading" class="text-sm text-neutral-500">Loading profile...</p>
@@ -589,6 +589,8 @@ onMounted(() => {
 onUnmounted(() => window.removeEventListener('click', onClickOutside))
 
 function openCreatePanel() {
+  showProfilePanel.value = false
+  showSearchPanel.value = false
   showCreatePanel.value = true
   createError.value = ''
 }
@@ -610,6 +612,8 @@ function closeCreatePanel() {
 }
 
 function openProfilePanel() {
+  showCreatePanel.value = false
+  showSearchPanel.value = false
   showProfilePanel.value = true
   profileError.value = ''
   loadProfile()
@@ -620,6 +624,8 @@ function closeProfilePanel() {
 }
 
 function openSearchPanel() {
+  showCreatePanel.value = false
+  showProfilePanel.value = false
   showSearchPanel.value = true
   searchQuery.value = ''
   searchResults.value = []
@@ -664,7 +670,9 @@ function formatPostDate(createdAt) {
     const y = d.getFullYear()
     const m = String(d.getMonth() + 1).padStart(2, '0')
     const day = String(d.getDate()).padStart(2, '0')
-    return `${y}-${m}-${day}`
+    const hh = String(d.getHours()).padStart(2, '0')
+    const mm = String(d.getMinutes()).padStart(2, '0')
+    return `${y}-${m}-${day} ${hh}:${mm}`
   } catch {
     return ''
   }
