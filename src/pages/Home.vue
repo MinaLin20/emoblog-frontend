@@ -160,8 +160,8 @@
 
                 <button
                   class="inline-flex items-center gap-2 rounded-button border border-border-default bg-btn-secondary px-3 py-2 text-btn-secondary-fg transition-colors hover:bg-btn-secondary-hover active:bg-btn-secondary-pressed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-                  disabled
-                  title="Comments coming soon"
+                  :disabled="acting[post.id] === true"
+                  @click="openComments(post)"
                 >
                   <template v-if="ICONS">
                     <img
@@ -403,11 +403,11 @@
         leave-active-class="transform transition duration-200 ease-in"
         leave-from-class="translate-y-0 opacity-100"
         leave-to-class="-translate-y-full opacity-0"
-      >
-        <section
-          v-if="showSearchPanel"
-          class="fixed inset-0 md:left-[260px] z-40 flex items-center justify-center bg-black/40 px-4"
-          role="dialog"
+        >
+          <section
+            v-if="showSearchPanel"
+            class="fixed inset-0 md:left-[260px] z-40 flex items-center justify-center bg-black/40 px-4"
+            role="dialog"
           aria-modal="true"
           aria-labelledby="search-panel-title"
           @click.self="closeSearchPanel"
@@ -477,13 +477,174 @@
                   </div>
                 </template>
               </div>
-            </form>
-          </div>
-        </section>
-      </Transition>
+              </form>
+            </div>
+          </section>
+        </Transition>
+
+        <Transition
+          enter-active-class="transform transition duration-300 ease-out"
+          enter-from-class="opacity-0 scale-95"
+          enter-to-class="opacity-100 scale-100"
+          leave-active-class="transform transition duration-200 ease-in"
+          leave-from-class="opacity-100 scale-100"
+          leave-to-class="opacity-0 scale-95"
+        >
+          <section
+            v-if="commentPanelPost"
+            class="fixed inset-0 md:left-[260px] z-50 flex items-center justify-center bg-black/40 px-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="comment-panel-title"
+            @click.self="closeComments"
+          >
+            <div class="relative flex w-full max-w-5xl flex-col rounded-[16px] bg-white p-6 text-neutral-900 shadow-2xl min-h-[60vh] max-h-[90vh]">
+              <header class="flex items-start justify-between gap-4 pb-4">
+                <div class="flex items-center gap-3">
+                  <div class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-indigo-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-500" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 12a5 5 0 10-5-5 5 5 0 005 5zm-8 7a8 8 0 0116 0 1 1 0 01-1 1H5a1 1 0 01-1-1z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 id="comment-panel-title" class="text-base font-semibold text-neutral-800">
+                      {{ commentPanelPost?.authorUsername || authorLabel(commentPanelPost) }}
+                    </h2>
+                    <p class="text-sm text-neutral-600 whitespace-pre-wrap">
+                      {{ commentPanelPost?.content }}
+                    </p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="flex items-center gap-2 rounded-full border border-neutral-200 px-3 py-1.5 text-sm text-neutral-700 transition hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15"
+                    @click="closeComments"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                      <path d="M18 6 6 18" />
+                      <path d="M6 6l12 12" />
+                    </svg>
+                    <span>Close</span>
+                  </button>
+                </div>
+              </header>
+
+              <div class="flex-1 overflow-y-auto px-1 pb-6">
+                <p v-if="commentsLoading" class="text-sm text-neutral-500">Loading comments...</p>
+                <p v-else-if="comments.length === 0" class="text-sm text-neutral-500">暫無留言</p>
+                <ul v-else class="space-y-4">
+                  <li
+                    v-for="comment in comments"
+                    :key="comment.id"
+                    class="rounded-2xl border border-neutral-200 bg-white p-3 shadow-sm"
+                  >
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="flex items-start gap-3">
+                        <div class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-indigo-50">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 12a5 5 0 10-5-5 5 5 0 005 5zm-8 7a8 8 0 0116 0 1 1 0 01-1 1H5a1 1 0 01-1-1z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <div class="text-sm font-semibold text-neutral-800">
+                            {{ comment.authorUsername || `User #${comment.authorId ?? '?'}` }}
+                          </div>
+                          <p v-if="commentEditId !== comment.id" class="mt-1 whitespace-pre-wrap text-sm text-neutral-800">
+                            {{ comment.content }}
+                          </p>
+                          <div v-else class="mt-1 space-y-2">
+                            <textarea
+                              v-model="commentEditValue"
+                              rows="3"
+                              class="w-full resize-none rounded-input border border-input-border bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 shadow-inner focus:border-neutral-300 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                            />
+                            <div class="flex gap-2">
+                              <button
+                                type="button"
+                                class="rounded-button bg-btn-primary px-3 py-1.5 text-sm text-white shadow-elevation-1 transition hover:bg-btn-primary-hover active:bg-btn-primary-pressed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-disabled"
+                                :disabled="commentEditLoading || !commentEditValue.trim()"
+                                @click="saveEditComment(comment)"
+                              >
+                                Save
+                              </button>
+                              <button
+                                type="button"
+                                class="rounded-button border border-border-default px-3 py-1.5 text-sm text-neutral-700 transition hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 disabled:opacity-disabled"
+                                :disabled="commentEditLoading"
+                                @click="cancelEditComment"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <button
+                          v-if="canEditComment(comment)"
+                          type="button"
+                          class="rounded-full border border-neutral-200 px-3 py-1 text-xs text-neutral-700 transition hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 disabled:opacity-disabled"
+                          :disabled="commentEditLoading"
+                          @click="startEditComment(comment)"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          v-if="canDeleteComment(comment)"
+                          type="button"
+                          class="rounded-full border border-accent-error/70 px-3 py-1 text-xs text-accent-error transition hover:bg-accent-error/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-error/30 disabled:opacity-disabled"
+                          :disabled="commentEditLoading"
+                          @click="deleteComment(comment)"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                    <div class="mt-2 text-xs text-neutral-500">{{ formatPostDate(comment.createdAt) }}</div>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="mt-auto rounded-full border border-neutral-200 bg-white px-4 py-3 shadow-inner">
+                <label for="comment-input" class="sr-only">Add a comment</label>
+                <div class="flex items-center gap-3">
+                  <div class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-indigo-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 12a5 5 0 10-5-5 5 5 0 005 5zm-8 7a8 8 0 0116 0 1 1 0 01-1 1H5a1 1 0 01-1-1z" />
+                    </svg>
+                  </div>
+                  <input
+                    id="comment-input"
+                    v-model="commentInput"
+                    type="text"
+                    placeholder="Add a Comment"
+                    class="flex-1 bg-transparent text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none"
+                    @keyup.enter="submitComment"
+                  />
+                  <button
+                    type="button"
+                    class="rounded-full p-2 text-btn-primary transition hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-disabled"
+                    :disabled="commentSubmitting || !commentInput.trim()"
+                    @click="submitComment"
+                  >
+                    <img
+                      :src="ICONS?.send"
+                      alt="Send"
+                      class="h-5 w-5 select-none object-contain"
+                      width="20"
+                      height="20"
+                    />
+                  </button>
+                </div>
+                <p v-if="commentError" class="mt-2 text-sm text-accent-error">{{ commentError }}</p>
+              </div>
+            </div>
+          </section>
+        </Transition>
+      </div>
     </div>
-  </div>
-</template>
+  </template>
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
@@ -511,6 +672,7 @@ const showCreatePanel = ref(false)
 
 const showProfilePanel = ref(false)
 const showSearchPanel = ref(false)
+const commentPanelPost = ref(null)
 const profile = ref({
   username: '',
   firstName: '',
@@ -525,6 +687,15 @@ const searchResults = ref([])
 const searchPerformed = ref(false)
 const searchError = ref('')
 const searchLoading = ref(false)
+const currentUsername = ref(decodeTokenUsername())
+const comments = ref([])
+const commentsLoading = ref(false)
+const commentError = ref('')
+const commentInput = ref('')
+const commentSubmitting = ref(false)
+const commentEditId = ref(null)
+const commentEditValue = ref('')
+const commentEditLoading = ref(false)
 
 const createIconDefault =
   'data:image/svg+xml;utf8,' +
@@ -635,6 +806,138 @@ function openSearchPanel() {
 
 function closeSearchPanel() {
   showSearchPanel.value = false
+}
+
+function openComments(post) {
+  showCreatePanel.value = false
+  showProfilePanel.value = false
+  showSearchPanel.value = false
+  commentPanelPost.value = post
+  commentError.value = ''
+  commentInput.value = ''
+  commentEditId.value = null
+  commentEditValue.value = ''
+  comments.value = []
+  fetchComments()
+}
+
+function closeComments() {
+  commentPanelPost.value = null
+  commentError.value = ''
+  commentInput.value = ''
+  commentEditId.value = null
+  commentEditValue.value = ''
+  comments.value = []
+}
+
+async function fetchComments() {
+  if (!commentPanelPost.value?.id) return
+  commentsLoading.value = true
+  commentError.value = ''
+  try {
+    const res = await api.get(`/posts/${commentPanelPost.value.id}/comments?page=0&size=50&sort=CREATED_DESC`)
+    const list = Array.isArray(res?.content) ? res.content : Array.isArray(res) ? res : []
+    comments.value = list
+  } catch (e) {
+    commentError.value = e?.message || '載入留言失敗'
+  } finally {
+    commentsLoading.value = false
+  }
+}
+
+function canEditComment(comment) {
+  if (!comment || !currentUsername.value) return false
+  return comment.authorUsername === currentUsername.value
+}
+
+function canDeleteComment(comment) {
+  if (!comment || !currentUsername.value) return false
+  const isCommentAuthor = comment.authorUsername === currentUsername.value
+  const isPostAuthor = commentPanelPost.value?.authorUsername === currentUsername.value
+  return isCommentAuthor || isPostAuthor
+}
+
+function startEditComment(comment) {
+  if (!canEditComment(comment)) return
+  commentEditId.value = comment.id
+  commentEditValue.value = comment.content || ''
+  commentError.value = ''
+}
+
+function cancelEditComment() {
+  commentEditId.value = null
+  commentEditValue.value = ''
+}
+
+async function saveEditComment(comment) {
+  if (!commentEditId.value) return
+  const trimmed = (commentEditValue.value || '').trim()
+  if (!trimmed) {
+    commentError.value = '留言不可為空'
+    return
+  }
+  commentEditLoading.value = true
+  try {
+    const res = await api.put(`/posts/comments/${comment.id}`, { content: trimmed })
+    const idx = comments.value.findIndex((c) => c.id === comment.id)
+    if (idx !== -1) comments.value[idx] = res
+    commentEditId.value = null
+    commentEditValue.value = ''
+  } catch (e) {
+    commentError.value = e?.message || '更新留言失敗'
+  } finally {
+    commentEditLoading.value = false
+  }
+}
+
+async function deleteComment(comment) {
+  if (!canDeleteComment(comment)) return
+  if (!confirm('確定要刪除這則留言嗎？')) return
+  commentEditLoading.value = true
+  try {
+    await api.delete(`/posts/comments/${comment.id}`)
+    comments.value = comments.value.filter((c) => c.id !== comment.id)
+    updatePostCommentCount(commentPanelPost.value?.id, -1)
+  } catch (e) {
+    commentError.value = e?.message || '刪除留言失敗'
+  } finally {
+    commentEditLoading.value = false
+    if (commentEditId.value === comment?.id) cancelEditComment()
+  }
+}
+
+async function submitComment() {
+  if (!commentPanelPost.value?.id) return
+  commentError.value = ''
+  const content = (commentInput.value || '').trim()
+  if (!content) {
+    commentError.value = '留言不可為空'
+    return
+  }
+  commentSubmitting.value = true
+  try {
+    const res = await api.post(`/posts/${commentPanelPost.value.id}/comments`, { content })
+    comments.value = [res, ...comments.value]
+    commentInput.value = ''
+    updatePostCommentCount(commentPanelPost.value.id, 1)
+  } catch (e) {
+    commentError.value = e?.message || '新增留言失敗'
+  } finally {
+    commentSubmitting.value = false
+  }
+}
+
+function updatePostCommentCount(postId, delta) {
+  if (!postId || !delta) return
+  const idx = posts.value.findIndex((p) => p.id === postId)
+  if (idx === -1) return
+  const current = posts.value[idx]
+  const nextCount = Math.max(0, (current.commentCount || 0) + delta)
+  const next = { ...current, commentCount: nextCount }
+  posts.value[idx] = next
+  if (commentPanelPost.value?.id === postId) {
+    commentPanelPost.value = next
+  }
 }
 
 async function fetchFeed() {
