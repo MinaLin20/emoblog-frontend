@@ -584,19 +584,35 @@
                         <button
                           v-if="canEditComment(comment)"
                           type="button"
-                          class="rounded-full border border-neutral-200 px-3 py-1 text-xs text-neutral-700 transition hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 disabled:opacity-disabled"
+                          class="inline-flex items-center gap-1 rounded-full border border-neutral-200 px-3 py-1 text-xs text-neutral-700 transition hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 disabled:opacity-disabled"
                           :disabled="commentEditLoading"
                           @click="startEditComment(comment)"
                         >
+                          <img
+                            v-if="ICONS?.edit"
+                            :src="ICONS.edit"
+                            alt="Edit"
+                            class="h-3.5 w-3.5 object-contain"
+                            width="14"
+                            height="14"
+                          />
                           Edit
                         </button>
                         <button
                           v-if="canDeleteComment(comment)"
                           type="button"
-                          class="rounded-full border border-accent-error/70 px-3 py-1 text-xs text-accent-error transition hover:bg-accent-error/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-error/30 disabled:opacity-disabled"
+                          class="inline-flex items-center gap-1 rounded-full border border-accent-error/70 px-3 py-1 text-xs text-accent-error transition hover:bg-accent-error/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-error/30 disabled:opacity-disabled"
                           :disabled="commentEditLoading"
                           @click="deleteComment(comment)"
                         >
+                          <img
+                            v-if="ICONS?.delete"
+                            :src="ICONS.delete"
+                            alt="Delete"
+                            class="h-3.5 w-3.5 object-contain"
+                            width="14"
+                            height="14"
+                          />
                           Delete
                         </button>
                       </div>
@@ -674,6 +690,7 @@ const showProfilePanel = ref(false)
 const showSearchPanel = ref(false)
 const commentPanelPost = ref(null)
 const profile = ref({
+  id: null,
   username: '',
   firstName: '',
   lastName: '',
@@ -688,6 +705,7 @@ const searchPerformed = ref(false)
 const searchError = ref('')
 const searchLoading = ref(false)
 const currentUsername = ref(decodeTokenUsername())
+const currentUserId = ref(decodeTokenUserId())
 const comments = ref([])
 const commentsLoading = ref(false)
 const commentError = ref('')
@@ -754,6 +772,7 @@ const profileBirthday = computed(() => formatBirthday(profile.value.birthday))
 
 onMounted(() => {
   fetchFeed()
+  loadProfile()
   window.addEventListener('click', onClickOutside)
 })
 
@@ -846,14 +865,25 @@ async function fetchComments() {
 }
 
 function canEditComment(comment) {
-  if (!comment || !currentUsername.value) return false
-  return comment.authorUsername === currentUsername.value
+  if (!comment) return false
+  const matchesUsername =
+    (currentUsername.value && comment.authorUsername === currentUsername.value) ||
+    (profile.value.username && comment.authorUsername === profile.value.username)
+  const matchesId =
+    (currentUserId.value && Number(comment.authorId) === Number(currentUserId.value)) ||
+    (profile.value.id && Number(comment.authorId) === Number(profile.value.id))
+  if (matchesUsername || matchesId) return true
+  return false
 }
 
 function canDeleteComment(comment) {
-  if (!comment || !currentUsername.value) return false
-  const isCommentAuthor = comment.authorUsername === currentUsername.value
-  const isPostAuthor = commentPanelPost.value?.authorUsername === currentUsername.value
+  if (!comment) return false
+  const isCommentAuthor = canEditComment(comment)
+  const isPostAuthor =
+    (currentUsername.value && commentPanelPost.value?.authorUsername === currentUsername.value) ||
+    (profile.value.username && commentPanelPost.value?.authorUsername === profile.value.username) ||
+    (currentUserId.value && Number(commentPanelPost.value?.authorId) === Number(currentUserId.value)) ||
+    (profile.value.id && Number(commentPanelPost.value?.authorId) === Number(profile.value.id))
   return isCommentAuthor || isPostAuthor
 }
 
@@ -870,7 +900,7 @@ function cancelEditComment() {
 }
 
 async function saveEditComment(comment) {
-  if (!commentEditId.value) return
+  if (!commentEditId.value || !canEditComment(comment)) return
   const trimmed = (commentEditValue.value || '').trim()
   if (!trimmed) {
     commentError.value = '留言不可為空'
@@ -1121,7 +1151,11 @@ async function loadProfile() {
   profileError.value = ''
   try {
     const stored = getStoredProfile()
-    if (stored) profile.value = { ...profile.value, ...stored }
+    if (stored) {
+      profile.value = { ...profile.value, ...stored }
+      if (!currentUsername.value && stored.username) currentUsername.value = stored.username
+      if (!currentUserId.value && stored.id) currentUserId.value = stored.id
+    }
     const username = profile.value.username || decodeTokenUsername()
     if (username) {
       profile.value.username = username
@@ -1169,7 +1203,11 @@ async function fetchProfileByUsername(username) {
       firstName: match.firstName || profile.value.firstName,
       lastName: match.lastName || profile.value.lastName,
       birthday: match.birthday || profile.value.birthday,
+      id: match.id ?? profile.value.id,
+      username: match.username || profile.value.username,
     }
+    if (match.username) currentUsername.value = match.username
+    if (match.id) currentUserId.value = match.id
     try {
       localStorage.setItem('emoProfile', JSON.stringify(profile.value))
     } catch {}
@@ -1195,6 +1233,19 @@ function decodeTokenUsername() {
     return decoded?.sub || ''
   } catch {
     return ''
+  }
+}
+
+function decodeTokenUserId() {
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) return null
+    const [, payload] = token.split('.')
+    if (!payload) return null
+    const decoded = JSON.parse(atob(payload))
+    return decoded?.id || decoded?.userId || null
+  } catch {
+    return null
   }
 }
 </script>
