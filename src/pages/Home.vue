@@ -114,9 +114,41 @@
                 </button>
               </div>
 
-              <div class="whitespace-pre-wrap text-body-2">{{ post.content }}</div>
+              <div class="mt-2">
+                <template v-if="editingPostId === post.id">
+                  <label :for="`edit-post-${post.id}`" class="sr-only">Edit post content</label>
+                  <textarea
+                    :id="`edit-post-${post.id}`"
+                    v-model="editValue"
+                    rows="4"
+                    class="w-full rounded-input border border-input-border bg-input-bg px-4 py-3 text-base text-text-primary placeholder:text-input-placeholder shadow-inner focus:border-focus-ring focus:outline-none focus:ring-2 focus:ring-focus-ring"
+                  />
+                  <div class="mt-3 flex flex-wrap items-center gap-3">
+                    <span v-if="editError" class="mr-auto text-sm text-accent-error">{{ editError }}</span>
+                    <button
+                      type="button"
+                      class="rounded-button bg-btn-primary px-5 py-2 text-btn-primary-fg shadow-elevation-1 transition hover:bg-btn-primary-hover active:bg-btn-primary-pressed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-disabled"
+                      :disabled="editLoading || !editValue.trim()"
+                      @click="saveEditPost(post)"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      class="rounded-button border border-border-default bg-btn-secondary px-5 py-2 text-btn-secondary-fg shadow-elevation-1 transition hover:bg-btn-secondary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-disabled"
+                      :disabled="editLoading"
+                      @click="cancelEditPost"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="whitespace-pre-wrap text-body-2">{{ post.content }}</div>
+                </template>
+              </div>
 
-              <div class="mt-4 flex gap-3">
+              <div v-if="editingPostId !== post.id" class="mt-4 flex gap-3">
                 <button
                   class="inline-flex items-center gap-2 rounded-button border border-border-default bg-surface-card px-3 py-2 text-text-primary transition-colors hover:bg-btn-secondary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                   :disabled="acting[post.id] === true"
@@ -680,6 +712,10 @@ const hasNext = ref(false)
 const menuOpen = ref(null)
 const liked = ref({})
 const acting = ref({})
+const editingPostId = ref(null)
+const editValue = ref('')
+const editError = ref('')
+const editLoading = ref(false)
 
 const createContent = ref('')
 const createLoading = ref(false)
@@ -1048,22 +1084,42 @@ function onClickOutside() {
 }
 
 async function handleEdit(post) {
-  const current = String(post?.content ?? '')
-  const next = window.prompt('Edit post content', current)
-  if (next == null) return
-  const trimmed = next.trim()
-  if (!trimmed || trimmed === current) {
-    menuOpen.value = null
+  editingPostId.value = post?.id ?? null
+  editValue.value = String(post?.content ?? '')
+  editError.value = ''
+  menuOpen.value = null
+}
+
+function cancelEditPost() {
+  editingPostId.value = null
+  editValue.value = ''
+  editError.value = ''
+  editLoading.value = false
+  menuOpen.value = null
+}
+
+async function saveEditPost(post) {
+  if (!post?.id || editingPostId.value !== post.id) return
+  const trimmed = (editValue.value || '').trim()
+  const current = String(post.content || '')
+  if (!trimmed) {
+    editError.value = '內容不可為空'
     return
   }
+  if (trimmed === current) {
+    cancelEditPost()
+    return
+  }
+  editLoading.value = true
   try {
     const res = await api.put(`/posts/${post.id}`, { content: trimmed })
     const idx = posts.value.findIndex((p) => p.id === post.id)
     if (idx !== -1) posts.value[idx] = res
+    cancelEditPost()
   } catch (e) {
-    error.value = e?.message || '更新失敗'
+    editError.value = e?.message || '更新失敗'
   } finally {
-    menuOpen.value = null
+    editLoading.value = false
   }
 }
 
