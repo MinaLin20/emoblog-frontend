@@ -1053,7 +1053,6 @@ async function deleteComment(comment) {
 }
 
 function closeDeleteCommentConfirm() {
-  if (commentDeleteLoading.value) return
   commentDeleteTarget.value = null
 }
 
@@ -1069,11 +1068,11 @@ async function confirmDeleteComment() {
     comments.value = comments.value.filter((c) => c.id !== target.id)
     updatePostCommentCount(commentPanelPost.value?.id, -1)
     if (commentEditId.value === target.id) cancelEditComment()
-    closeDeleteCommentConfirm()
   } catch (e) {
     commentError.value = e?.message || '刪除留言失敗'
   } finally {
     commentDeleteLoading.value = false
+    closeDeleteCommentConfirm()
   }
 }
 
@@ -1249,7 +1248,6 @@ async function handleDelete(post) {
 }
 
 function closeDeleteConfirm() {
-  if (deleteLoading.value) return
   deleteConfirmPost.value = null
 }
 
@@ -1263,11 +1261,11 @@ async function confirmDeletePost() {
   try {
     await api.delete(`/posts/${post.id}`)
     posts.value = posts.value.filter((p) => p.id !== post.id)
-    closeDeleteConfirm()
   } catch (e) {
     error.value = e?.message || '刪除失敗'
   } finally {
     deleteLoading.value = false
+    closeDeleteConfirm()
   }
 }
 
