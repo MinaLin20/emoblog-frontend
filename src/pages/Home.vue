@@ -106,6 +106,7 @@
                   </div>
                 </div>
                 <button
+                  v-if="canManagePost(post)"
                   class="rounded-button px-2 py-1 text-text-secondary hover:bg-btn-secondary-hover"
                   aria-label="More actions"
                   @click.stop="toggleMenu(post.id)"
@@ -127,7 +128,7 @@
                     <span v-if="editError" class="mr-auto text-sm text-accent-error">{{ editError }}</span>
                     <button
                       type="button"
-                      class="rounded-button bg-btn-primary px-5 py-2 text-btn-primary-fg shadow-elevation-1 transition hover:bg-btn-primary-hover active:bg-btn-primary-pressed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-disabled"
+                      class="rounded-button bg-btn-primary px-5 py-2 text-white shadow-elevation-1 transition hover:bg-btn-primary-hover active:bg-btn-primary-pressed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-disabled"
                       :disabled="editLoading || !editValue.trim()"
                       @click="saveEditPost(post)"
                     >
@@ -136,6 +137,7 @@
                     <button
                       type="button"
                       class="rounded-button border border-border-default bg-btn-secondary px-5 py-2 text-btn-secondary-fg shadow-elevation-1 transition hover:bg-btn-secondary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-disabled"
+
                       :disabled="editLoading"
                       @click="cancelEditPost"
                     >
@@ -220,7 +222,7 @@
                 </button>
               </div>
 
-              <div v-if="menuOpen === post.id" class="absolute right-2 top-10 z-10">
+              <div v-if="menuOpen === post.id && canManagePost(post)" class="absolute right-2 top-10 z-10">
                 <div class="flex items-center gap-3 rounded-card border border-border-default bg-surface-card p-3 shadow-elevation-2">
                   <button
                     class="inline-flex items-center gap-2 rounded-button border border-border-default bg-surface-card px-4 py-2 text-text-primary hover:bg-btn-secondary-hover"
@@ -579,8 +581,9 @@
                           </svg>
                         </div>
                         <div>
-                          <div class="text-sm font-semibold text-neutral-800">
-                            {{ comment.authorUsername || `User #${comment.authorId ?? '?'}` }}
+                          <div class="flex flex-wrap items-center gap-2 text-sm font-semibold text-neutral-800">
+                            <span>{{ comment.authorUsername || `User #${comment.authorId ?? '?'}` }}</span>
+                            <span class="text-xs font-normal text-neutral-500">{{ formatPostDate(comment.createdAt) }}</span>
                           </div>
                           <p v-if="commentEditId !== comment.id" class="mt-1 whitespace-pre-wrap text-sm text-neutral-800">
                             {{ comment.content }}
@@ -649,7 +652,6 @@
                         </button>
                       </div>
                     </div>
-                    <div class="mt-2 text-xs text-neutral-500">{{ formatPostDate(comment.createdAt) }}</div>
                   </li>
                 </ul>
               </div>
@@ -687,12 +689,94 @@
                 </div>
                 <p v-if="commentError" class="mt-2 text-sm text-accent-error">{{ commentError }}</p>
               </div>
+          </div>
+        </section>
+      </Transition>
+
+      <Transition
+        enter-active-class="transform transition duration-300 ease-out"
+        enter-from-class="scale-95 opacity-0"
+        enter-to-class="scale-100 opacity-100"
+        leave-active-class="transform transition duration-200 ease-in"
+        leave-from-class="scale-100 opacity-100"
+        leave-to-class="scale-95 opacity-0"
+      >
+        <section
+          v-if="commentDeleteTarget"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="comment-delete-title"
+          @click.self="closeDeleteCommentConfirm"
+        >
+          <div class="w-full max-w-md rounded-card bg-white p-6 shadow-elevation-3">
+            <h2 id="comment-delete-title" class="text-center text-lg font-semibold text-neutral-900">Delete this comment?</h2>
+            <p class="mt-3 text-center text-sm text-neutral-600">This action cannot be undone.</p>
+            <div class="mt-6 flex justify-center gap-3">
+              <button
+                type="button"
+                class="rounded-button border border-border-default bg-btn-secondary px-5 py-2 text-btn-secondary-fg shadow-elevation-1 transition hover:bg-btn-secondary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-disabled"
+                :disabled="commentDeleteLoading"
+                @click="closeDeleteCommentConfirm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="rounded-button bg-accent-error px-5 py-2 text-text-invert shadow-elevation-1 transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-disabled"
+                :disabled="commentDeleteLoading"
+                @click="confirmDeleteComment"
+              >
+                {{ commentDeleteLoading ? 'Deleting...' : 'Delete' }}
+              </button>
             </div>
-          </section>
-        </Transition>
-      </div>
+          </div>
+        </section>
+      </Transition>
+
+      <Transition
+        enter-active-class="transform transition duration-300 ease-out"
+        enter-from-class="scale-95 opacity-0"
+        enter-to-class="scale-100 opacity-100"
+        leave-active-class="transform transition duration-200 ease-in"
+        leave-from-class="scale-100 opacity-100"
+        leave-to-class="scale-95 opacity-0"
+      >
+        <section
+          v-if="deleteConfirmPost"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-confirm-title"
+          @click.self="closeDeleteConfirm"
+        >
+          <div class="w-full max-w-md rounded-card bg-white p-6 shadow-elevation-3">
+            <h2 id="delete-confirm-title" class="text-center text-lg font-semibold text-neutral-900">Delete this post?</h2>
+            <p class="mt-3 text-center text-sm text-neutral-600">This action cannot be undone.</p>
+            <div class="mt-6 flex justify-center gap-3">
+              <button
+                type="button"
+                class="rounded-button border border-border-default bg-btn-secondary px-5 py-2 text-btn-secondary-fg shadow-elevation-1 transition hover:bg-btn-secondary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-disabled"
+                :disabled="deleteLoading"
+                @click="closeDeleteConfirm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="rounded-button bg-accent-error px-5 py-2 text-text-invert shadow-elevation-1 transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-disabled"
+                :disabled="deleteLoading"
+                @click="confirmDeletePost"
+              >
+                {{ deleteLoading ? 'Deleting...' : 'Delete' }}
+              </button>
+            </div>
+          </div>
+        </section>
+      </Transition>
     </div>
-  </template>
+  </div>
+</template>
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
@@ -750,6 +834,10 @@ const commentSubmitting = ref(false)
 const commentEditId = ref(null)
 const commentEditValue = ref('')
 const commentEditLoading = ref(false)
+const commentDeleteTarget = ref(null)
+const commentDeleteLoading = ref(false)
+const deleteConfirmPost = ref(null)
+const deleteLoading = ref(false)
 
 const createIconDefault =
   'data:image/svg+xml;utf8,' +
@@ -883,6 +971,8 @@ function closeComments() {
   commentEditId.value = null
   commentEditValue.value = ''
   comments.value = []
+  commentDeleteTarget.value = null
+  commentDeleteLoading.value = false
 }
 
 async function fetchComments() {
@@ -958,17 +1048,32 @@ async function saveEditComment(comment) {
 
 async function deleteComment(comment) {
   if (!canDeleteComment(comment)) return
-  if (!confirm('確定要刪除這則留言嗎？')) return
-  commentEditLoading.value = true
+  commentDeleteTarget.value = comment
+  commentError.value = ''
+}
+
+function closeDeleteCommentConfirm() {
+  if (commentDeleteLoading.value) return
+  commentDeleteTarget.value = null
+}
+
+async function confirmDeleteComment() {
+  const target = commentDeleteTarget.value
+  if (!target?.id) {
+    closeDeleteCommentConfirm()
+    return
+  }
+  commentDeleteLoading.value = true
   try {
-    await api.delete(`/posts/comments/${comment.id}`)
-    comments.value = comments.value.filter((c) => c.id !== comment.id)
+    await api.delete(`/posts/comments/${target.id}`)
+    comments.value = comments.value.filter((c) => c.id !== target.id)
     updatePostCommentCount(commentPanelPost.value?.id, -1)
+    if (commentEditId.value === target.id) cancelEditComment()
+    closeDeleteCommentConfirm()
   } catch (e) {
     commentError.value = e?.message || '刪除留言失敗'
   } finally {
-    commentEditLoading.value = false
-    if (commentEditId.value === comment?.id) cancelEditComment()
+    commentDeleteLoading.value = false
   }
 }
 
@@ -1058,6 +1163,17 @@ function fullName(user) {
   return composed || user.username || 'Name'
 }
 
+function canManagePost(post) {
+  if (!post) return false
+  const matchesUsername =
+    (currentUsername.value && post.authorUsername === currentUsername.value) ||
+    (profile.value.username && post.authorUsername === profile.value.username)
+  const matchesId =
+    (currentUserId.value && Number(post.authorId) === Number(currentUserId.value)) ||
+    (profile.value.id && Number(post.authorId) === Number(profile.value.id))
+  return matchesUsername || matchesId
+}
+
 async function toggleLike(post) {
   if (!post?.id || acting.value[post.id]) return
   acting.value[post.id] = true
@@ -1076,6 +1192,8 @@ async function toggleLike(post) {
 }
 
 function toggleMenu(id) {
+  const post = posts.value.find((p) => p.id === id)
+  if (!canManagePost(post)) return
   menuOpen.value = menuOpen.value === id ? null : id
 }
 
@@ -1084,6 +1202,7 @@ function onClickOutside() {
 }
 
 async function handleEdit(post) {
+  if (!canManagePost(post)) return
   editingPostId.value = post?.id ?? null
   editValue.value = String(post?.content ?? '')
   editError.value = ''
@@ -1124,14 +1243,31 @@ async function saveEditPost(post) {
 }
 
 async function handleDelete(post) {
-  if (!confirm('確定要刪除這篇貼文嗎？')) return
+  if (!canManagePost(post)) return
+  deleteConfirmPost.value = post
+  menuOpen.value = null
+}
+
+function closeDeleteConfirm() {
+  if (deleteLoading.value) return
+  deleteConfirmPost.value = null
+}
+
+async function confirmDeletePost() {
+  const post = deleteConfirmPost.value
+  if (!post?.id) {
+    closeDeleteConfirm()
+    return
+  }
+  deleteLoading.value = true
   try {
     await api.delete(`/posts/${post.id}`)
     posts.value = posts.value.filter((p) => p.id !== post.id)
+    closeDeleteConfirm()
   } catch (e) {
     error.value = e?.message || '刪除失敗'
   } finally {
-    menuOpen.value = null
+    deleteLoading.value = false
   }
 }
 
